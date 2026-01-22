@@ -1,0 +1,10 @@
+.husky
+auth
+build
+node_modules
+.git
+.gitignore
+.prettierrc
+Dockerfile
+eslint.config.mjs
+lint-staged.config.js
