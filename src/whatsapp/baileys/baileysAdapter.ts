@@ -4,7 +4,6 @@ import type { Boom } from "@hapi/boom";
 import makeWASocket, {
   ConnectionState,
   DisconnectReason,
-  useMultiFileAuthState,
   WASocket,
 } from "baileys";
 import { pino } from "pino";
@@ -15,10 +14,11 @@ import {
   WaClientNotReadyError,
   WaClientUnexpectedError,
 } from "@/errors/appErrors";
-import { LOG_LEVEL } from "@/global/config";
+import { AUTH_DATA_DIR, LOG_LEVEL } from "@/global/config";
 import { logger } from "@/global/logger";
 
 import { WhatsappClient } from "../types";
+import { createLevelDbAuthState } from "./authState";
 
 enum SocketStatus {
   CONNECTING = "CONNECTING",
@@ -47,7 +47,7 @@ export const createBaileysClient = (): WhatsappClient => {
   })();
 
   async function createSocket() {
-    const { state, saveCreds } = await useMultiFileAuthState("auth");
+    const { state, saveCreds } = await createLevelDbAuthState(AUTH_DATA_DIR);
 
     sock = makeWASocket({
       auth: state,

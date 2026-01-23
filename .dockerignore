@@ -1,5 +1,5 @@
 .husky
-auth
+data
 build
 node_modules
 .git

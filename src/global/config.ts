@@ -14,9 +14,12 @@ export const MAX_BODY_SIZE = process.env.MAX_BODY_SIZE || "10mb";
 export const NODE_ENV =
   process.env.NODE_ENV === "production" ? "production" : "development";
 
+export const AUTH_DATA_DIR = process.env.AUTH_DATA_DIR || "data";
+
 export default {
   PORT,
   LOG_LEVEL,
   MAX_BODY_SIZE,
   NODE_ENV,
+  AUTH_DATA_DIR,
 };
