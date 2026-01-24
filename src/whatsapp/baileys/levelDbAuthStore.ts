@@ -1,17 +1,15 @@
-import {
-  AuthenticationCreds,
-  AuthenticationState,
-  SignalDataTypeMap,
-} from "baileys";
+import { AuthenticationCreds, SignalDataTypeMap } from "baileys";
 import { initAuthCreds } from "baileys";
 import JSONB from "json-buffer";
 import { BatchOperation, Level } from "level";
 
+import { BaileysAuthStore } from "./baileysAdapter";
+
 let db: Level<string, string>;
 
-export const createLevelDbAuthState = async (
+export const createLevelDbAuthStore = async (
   location: string,
-): Promise<{ state: AuthenticationState; saveCreds: () => Promise<void> }> => {
+): Promise<BaileysAuthStore> => {
   if (db === undefined) {
     db = new Level(location, {
       valueEncoding: "utf8",
@@ -72,12 +70,12 @@ export const createLevelDbAuthState = async (
 
           await db.batch(tasks);
         },
-        clear() {
-          return db.clear();
-        },
       },
     },
-    saveCreds: async () => {
+    async clear() {
+      return db.clear();
+    },
+    async saveCreds() {
       return db.put("creds", JSONB.stringify(creds));
     },
   };

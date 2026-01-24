@@ -1,7 +1,6 @@
-import { rm } from "node:fs/promises";
-
 import type { Boom } from "@hapi/boom";
 import makeWASocket, {
+  AuthenticationState,
   ConnectionState,
   DisconnectReason,
   WASocket,
@@ -18,7 +17,7 @@ import { AUTH_DATA_DIR, LOG_LEVEL } from "@/global/config";
 import { logger } from "@/global/logger";
 
 import { WhatsappClient } from "../types";
-import { createLevelDbAuthState } from "./authState";
+import { createLevelDbAuthStore } from "./levelDbAuthStore";
 
 enum SocketStatus {
   CONNECTING = "CONNECTING",
@@ -38,8 +37,15 @@ const errorMapping = new Map<DisconnectReason, SocketStatus>([
   [DisconnectReason.timedOut, SocketStatus.ERROR_TIMED_OUT],
 ]);
 
+export interface BaileysAuthStore {
+  state: AuthenticationState;
+  saveCreds: () => Promise<void>;
+  clear: () => Promise<void>;
+}
+
 export const createBaileysClient = (): WhatsappClient => {
   let sock: WASocket | undefined;
+  let authStore: BaileysAuthStore;
   let status = SocketStatus.CONNECTING;
 
   (async () => {
@@ -47,17 +53,17 @@ export const createBaileysClient = (): WhatsappClient => {
   })();
 
   async function createSocket() {
-    const { state, saveCreds } = await createLevelDbAuthState(AUTH_DATA_DIR);
+    authStore = await createLevelDbAuthStore(AUTH_DATA_DIR);
 
     sock = makeWASocket({
-      auth: state,
+      auth: authStore.state,
       logger: pino({
         level:
           LOG_LEVEL === "trace" || LOG_LEVEL === "debug" ? LOG_LEVEL : "error",
       }),
     });
 
-    sock.ev.on("creds.update", saveCreds);
+    sock.ev.on("creds.update", authStore.saveCreds);
     sock.ev.on("connection.update", handleConnectionUpdate);
 
     return sock;
@@ -96,7 +102,8 @@ export const createBaileysClient = (): WhatsappClient => {
     if (statusCode === DisconnectReason.loggedOut) {
       logger.fatal("Logged Out");
       logger.info("Deleting whatsapp auth state");
-      await rm("auth", { force: true, recursive: true });
+
+      await authStore.clear();
     }
 
     if (errorMapping.has(statusCode)) {
