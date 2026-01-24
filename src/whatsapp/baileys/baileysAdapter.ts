@@ -110,16 +110,10 @@ export const createBaileysClient = (): WhatsappClient => {
       status = errorMapping.get(statusCode) as SocketStatus;
     }
 
-    if (
-      statusCode === DisconnectReason.restartRequired ||
-      statusCode === DisconnectReason.loggedOut ||
-      statusCode === DisconnectReason.connectionLost
-    ) {
-      logger.info("Restarting");
+    logger.info("Restarting");
 
-      // setTimeout prevents recursion
-      setTimeout(createSocket, 0);
-    }
+    // setTimeout prevents recursion
+    setTimeout(createSocket, 0);
   }
 
   return {
