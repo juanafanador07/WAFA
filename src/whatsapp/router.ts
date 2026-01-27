@@ -1,13 +1,14 @@
 import { Router } from "express";
 
-import { createBaileysClient } from "@/whatsapp/baileys/baileysAdapter";
+import { WhatsappClient } from "@/types";
 import { createNotificationController } from "@/whatsapp/controller";
 
-const router = Router();
-const client = createBaileysClient();
-const controller = createNotificationController(client);
+export function createNotificationRouter(client: WhatsappClient) {
+  const router = Router();
+  const controller = createNotificationController(client);
 
-router.post("/", controller.sendMessage);
-router.get("/health", controller.getHealth);
+  router.post("/", controller.sendMessage);
+  router.get("/health", controller.getHealth);
 
-export { router as notificationRouter };
+  return router;
+}

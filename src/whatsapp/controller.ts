@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import z from "zod";
 
 import { logger } from "@/global/logger";
-import { WhatsappClient } from "@/whatsapp/types";
+import { WhatsappClient } from "@/types";
 
 const MessageReq = z.object({
   title: z.string(),

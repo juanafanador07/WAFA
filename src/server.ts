@@ -5,25 +5,28 @@ import { logger } from "@/global/logger";
 import { globalErrorHandler } from "@/middlewares/globalErrorHandler";
 import { jsonErrorHandler } from "@/middlewares/jsonErrorHandler";
 import { zodErrorHandler } from "@/middlewares/zodErrorHandler";
-import { notificationRouter } from "@/whatsapp/router";
 
-const app = express();
+import { WhatsappClient } from "./types";
+import { createNotificationRouter } from "./whatsapp/router";
 
-app.use(
-  express.json({
-    limit: MAX_BODY_SIZE,
-  }),
-);
+export function createServer(client: WhatsappClient) {
+  const app = express();
 
-app.use(jsonErrorHandler);
+  app.use(
+    express.json({
+      limit: MAX_BODY_SIZE,
+    }),
+  );
 
-app.use(notificationRouter);
+  app.use(jsonErrorHandler);
 
-app.use(zodErrorHandler);
-app.use(globalErrorHandler);
+  const notificationRouter = createNotificationRouter(client);
+  app.use(notificationRouter);
 
-app.listen(PORT, () => {
-  logger.info(`Web server listening on port ${PORT}`);
-});
+  app.use(zodErrorHandler);
+  app.use(globalErrorHandler);
 
-export default app;
+  app.listen(PORT, () => {
+    logger.info(`Web server listening on port ${PORT}`);
+  });
+}

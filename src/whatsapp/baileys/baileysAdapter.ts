@@ -15,8 +15,8 @@ import {
 } from "@/errors/appErrors";
 import { AUTH_DATA_DIR, LOG_LEVEL } from "@/global/config";
 import { logger } from "@/global/logger";
+import { WhatsappClient } from "@/types";
 
-import { WhatsappClient } from "../types";
 import { createLevelDbAuthStore } from "./levelDbAuthStore";
 
 enum SocketStatus {
@@ -49,12 +49,11 @@ export const createBaileysClient = (): WhatsappClient => {
   let status = SocketStatus.CONNECTING;
 
   (async () => {
+    authStore = await createLevelDbAuthStore(AUTH_DATA_DIR);
     if (!sock) sock = await createSocket();
   })();
 
   async function createSocket() {
-    authStore = await createLevelDbAuthStore(AUTH_DATA_DIR);
-
     sock = makeWASocket({
       auth: authStore.state,
       logger: pino({
