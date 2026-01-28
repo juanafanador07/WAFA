@@ -40,8 +40,26 @@ export const createNotificationController = (client: WhatsappClient) => ({
     logger.info(data);
 
     await Promise.all(
-      data.chats.map((chat) => {
-        return client.sendMessage(chat, data);
+      data.chats.map(async (chat) => {
+        await client.sendMessage({
+          chat,
+          text:
+            data.title.length > 0
+              ? `*${data.title}*\n${data.message}`
+              : data.message,
+          attachment:
+            data.attachments.length > 0 ? data.attachments[0] : undefined,
+        });
+
+        if (data.attachments.length > 1) {
+          for (let i = 1; i < data.attachments.length; i++) {
+            await client.sendMessage({
+              chat,
+              text: "",
+              attachment: data.attachments[i],
+            });
+          }
+        }
       }),
     );
 
