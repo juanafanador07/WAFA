@@ -18,5 +18,7 @@ RUN pnpm install --frozen-lockfile && \
 FROM prod-deps AS run
 COPY --from=build /app/build build
 COPY --from=build /app/LICENSE .
+RUN apk add --no-cache curl
+ENV AUTH_DATA_DIR=/data
 ENTRYPOINT [ "node" ]
 CMD ["build/index.js"]
