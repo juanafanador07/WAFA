@@ -32,12 +32,12 @@ export const createNotificationController = (client: WhatsappClient) => ({
     });
   },
 
-  async sendMessage(req: Request, res: Response) {
+  async sendNotification(req: Request, res: Response) {
     client.getHealth();
 
     const data = MessageReq.parse(req.body);
 
-    logger.info(data);
+    logger.info(data, "Sending Notification");
 
     await Promise.all(
       data.chats.map(async (chat) => {
