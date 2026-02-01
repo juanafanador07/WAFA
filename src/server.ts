@@ -1,6 +1,6 @@
 import express from "express";
 
-import { MAX_BODY_SIZE, PORT } from "@/global/config";
+import { LISTEN_INTERFACE, MAX_BODY_SIZE, PORT } from "@/global/config";
 import { logger } from "@/global/logger";
 import { globalErrorHandler } from "@/middlewares/globalErrorHandler";
 import { jsonErrorHandler } from "@/middlewares/jsonErrorHandler";
@@ -26,7 +26,14 @@ export function createServer(client: WhatsappClient) {
   app.use(zodErrorHandler);
   app.use(globalErrorHandler);
 
-  app.listen(PORT, () => {
-    logger.info(`Web server listening on port ${PORT}`);
+  app.listen(PORT, LISTEN_INTERFACE, (err) => {
+    if (err) {
+      logger.error(err);
+      return;
+    }
+
+    logger.info(
+      `Web server listening on interface ${LISTEN_INTERFACE} with port ${PORT}`,
+    );
   });
 }

@@ -1,25 +1,23 @@
 import "dotenv/config";
-import { Level } from "pino";
+import z from "zod";
 
-export const PORT = process.env.PORT || 3000;
+const envSchema = z.object({
+  LOG_LEVEL: z
+    .enum(["trace", "debug", "info", "warn", "error", "fatal"])
+    .default("info"),
+  PORT: z.coerce.number().int().min(0).max(65535).default(3000),
+  LISTEN_INTERFACE: z.union([z.ipv4(), z.ipv6()]).default("127.0.0.1"),
+  MAX_BODY_SIZE: z.union([z.string(), z.number()]).default("10mb"),
+  AUTH_DATA_DIR: z.string().default("./data"),
+});
 
-export const LOG_LEVEL: Level = (
-  ["trace", "debug", "info", "warn", "error", "fatal"] as Level[]
-).includes(process.env.LOG_LEVEL as Level)
-  ? (process.env.LOG_LEVEL as Level)
-  : "info";
+const env = envSchema.parse(process.env);
 
-export const MAX_BODY_SIZE = process.env.MAX_BODY_SIZE || "10mb";
-
-export const NODE_ENV =
-  process.env.NODE_ENV === "production" ? "production" : "development";
-
-export const AUTH_DATA_DIR = process.env.AUTH_DATA_DIR || "data";
-
-export default {
-  PORT,
+export default env;
+export const {
   LOG_LEVEL,
+  PORT,
+  LISTEN_INTERFACE,
   MAX_BODY_SIZE,
-  NODE_ENV,
   AUTH_DATA_DIR,
-};
+} = env;
