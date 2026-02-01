@@ -4,6 +4,7 @@
   "description": "",
   "main": "build/index.js",
   "scripts": {
+    "start": "node build/index.js",
     "build": "tsc && resolve-tspaths",
     "prepare": "husky || true",
     "dev": "tsx watch --include src src/index.ts | pino-pretty"

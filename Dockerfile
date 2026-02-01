@@ -21,5 +21,5 @@ COPY --from=build /app/LICENSE .
 RUN apk add --no-cache curl
 ENV AUTH_DATA_DIR=/data
 ENV LISTEN_INTERFACE=0.0.0.0
-ENTRYPOINT [ "node" ]
-CMD ["build/index.js"]
+ENTRYPOINT [ "pnpm" ]
+CMD ["start"]
