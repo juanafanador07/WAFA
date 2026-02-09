@@ -9,6 +9,7 @@ import makeWASocket, {
 } from "baileys";
 import { pino } from "pino";
 import QRCode from "qrcode";
+import sharp from "sharp";
 import z from "zod";
 
 import {
@@ -203,11 +204,53 @@ export const createBaileysClient = (): WhatsappClient => {
           return;
         }
 
+        const caption = text.length > 0 ? text : undefined;
+        const { mimetype, buffer, filename } = attachment;
+
+        if (attachment.mimetype.startsWith("image")) {
+          try {
+            await sock?.sendMessage(chat, {
+              caption,
+              image: await sharp(buffer).png().toBuffer(),
+              mimetype: "image/png",
+            });
+
+            return;
+          } catch {
+            // fallback to sending as document
+          }
+        }
+
+        if (attachment.mimetype.startsWith("video")) {
+          await sock?.sendMessage(chat, {
+            caption,
+            video: buffer,
+            mimetype,
+          });
+
+          return;
+        }
+
+        if (attachment.mimetype.startsWith("audio")) {
+          if (caption) {
+            await sock?.sendMessage(chat, {
+              text,
+            });
+          }
+
+          await sock?.sendMessage(chat, {
+            audio: buffer,
+            mimetype,
+          });
+
+          return;
+        }
+
         await sock?.sendMessage(chat, {
-          caption: text.length > 0 ? text : undefined,
-          mimetype: attachment.mimetype,
-          fileName: attachment.filename,
-          document: attachment.buffer,
+          caption,
+          mimetype,
+          fileName: filename,
+          document: buffer,
         });
       } catch (err) {
         if (err instanceof Error) {

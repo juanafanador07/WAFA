@@ -22,6 +22,7 @@
     "level": "^10.0.0",
     "pino": "^10.2.1",
     "qrcode": "^1.5.4",
+    "sharp": "^0.34.5",
     "zod": "^4.3.5"
   },
   "devDependencies": {
