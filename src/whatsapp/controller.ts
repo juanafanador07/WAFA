@@ -4,6 +4,8 @@ import z from "zod";
 import { logger } from "@/global/logger";
 import { WhatsappClient } from "@/types";
 
+import { mdToWhatsapp } from "./markdown";
+
 const MessageReq = z.object({
   title: z.string(),
   message: z.string(),
@@ -39,16 +41,18 @@ export const createNotificationController = (client: WhatsappClient) => ({
 
     logger.info(data, "Sending Notification");
 
+    const text = await mdToWhatsapp(
+      data.title.length > 0
+        ? `**${data.title}**\n${data.message}`
+        : data.message,
+    );
+
     await Promise.all(
       data.chats.map(async (chat) => {
         await client.sendMessage({
           chat,
-          text:
-            data.title.length > 0
-              ? `*${data.title}*\n${data.message}`
-              : data.message,
-          attachment:
-            data.attachments.length > 0 ? data.attachments[0] : undefined,
+          text,
+          attachment: data.attachments[0],
         });
 
         if (data.attachments.length > 1) {
