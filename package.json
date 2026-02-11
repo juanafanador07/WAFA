@@ -15,14 +15,20 @@
   "packageManager": "pnpm@10.28.0",
   "dependencies": {
     "@jsonjoy.com/json-pointer": "^17.65.0",
+    "@types/mdast": "^4.0.4",
     "baileys": "7.0.0-rc.9",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "json-buffer": "^3.0.1",
     "level": "^10.0.0",
+    "mdast-util-definitions": "^6.0.0",
+    "mdast-util-gfm-strikethrough": "^2.0.0",
+    "micromark-extension-gfm-strikethrough": "^2.1.0",
     "pino": "^10.2.1",
     "qrcode": "^1.5.4",
+    "remark-parse": "^11.0.0",
     "sharp": "^0.34.5",
+    "unified": "^11.0.5",
     "zod": "^4.3.5"
   },
   "devDependencies": {
