@@ -5,6 +5,7 @@ import makeWASocket, {
   AuthenticationState,
   ConnectionState,
   DisconnectReason,
+  fetchLatestBaileysVersion,
   WASocket,
 } from "baileys";
 import { pino } from "pino";
@@ -32,6 +33,8 @@ enum SocketStatus {
   ERROR_CONNECTION_LOST = "ERROR_CONNECTION_LOST",
   ERROR_CONNECTION_REPLACED = "ERROR_CONNECTION_REPLACED",
   ERROR_TIMED_OUT = "ERROR_TIMED_OUT",
+  ERROR_LOGGED_OUT = "ERROR_LOGGED_OUT",
+  RESTART_REQUIRED = "RESTART_REQUIRED",
 }
 
 const errorMapping = new Map<DisconnectReason, SocketStatus>([
@@ -39,6 +42,8 @@ const errorMapping = new Map<DisconnectReason, SocketStatus>([
   [DisconnectReason.connectionLost, SocketStatus.ERROR_CONNECTION_LOST],
   [DisconnectReason.connectionReplaced, SocketStatus.ERROR_CONNECTION_REPLACED],
   [DisconnectReason.timedOut, SocketStatus.ERROR_TIMED_OUT],
+  [DisconnectReason.loggedOut, SocketStatus.ERROR_LOGGED_OUT],
+  [DisconnectReason.restartRequired, SocketStatus.RESTART_REQUIRED],
 ]);
 
 export interface BaileysAuthStore {
@@ -59,8 +64,12 @@ export const createBaileysClient = (): WhatsappClient => {
   })();
 
   async function createSocket() {
+    const { version } = await fetchLatestBaileysVersion();
+
     sock = makeWASocket({
       auth: authStore.state,
+      version,
+      browser: ["Chrome", "Windows", "110.0.5481.177"],
       logger: pino({
         level:
           LOG_LEVEL === "trace" || LOG_LEVEL === "debug" ? LOG_LEVEL : "error",
@@ -92,7 +101,7 @@ export const createBaileysClient = (): WhatsappClient => {
         });
 
         if (!success) {
-          logger.warn(msg, "Ignored message due to invalid schema");
+          logger.debug(msg, "Ignored message due to invalid schema");
           return;
         }
 
@@ -123,6 +132,7 @@ export const createBaileysClient = (): WhatsappClient => {
     }
 
     if (state.connection === "connecting") {
+      logger.info("Connecting to WhatsApp...");
       status = SocketStatus.CONNECTING;
     }
 
@@ -144,25 +154,31 @@ export const createBaileysClient = (): WhatsappClient => {
       status = errorMapping.get(statusCode) as SocketStatus;
     }
 
-    logger.info("Restarting");
+    logger.info({ reason: status, statusCode }, "Restarting in 15s...");
 
     // setTimeout prevents recursion
-    setTimeout(createSocket, 0);
+    // Retry after 15s. See https://github.com/WhiskeySockets/Baileys/issues/2370#issuecomment-3954339410
+    setTimeout(createSocket, 15000);
   }
 
   return {
     events,
     getHealth() {
-      if (status === SocketStatus.CONNECTING) {
+      if (
+        status === SocketStatus.CONNECTING ||
+        status === SocketStatus.RESTART_REQUIRED
+      ) {
         throw new WaClientNotReadyError(
           "Client is still connecting to WhatsApp.",
         );
       }
 
+      if (status === SocketStatus.ERROR_LOGGED_OUT) {
+        throw new WaClientLoggedOutError("Awaiting QR code generation.");
+      }
+
       if (status === SocketStatus.SCAN_QR) {
-        throw new WaClientLoggedOutError(
-          "Logged out of WhatsApp. Please login using the QR.",
-        );
+        throw new WaClientLoggedOutError("Scan the QR code to log in.");
       }
 
       if (status === SocketStatus.ERROR_CONNECTION_LOST) {
