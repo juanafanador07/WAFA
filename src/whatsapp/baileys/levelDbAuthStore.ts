@@ -3,7 +3,7 @@ import { initAuthCreds } from "baileys";
 import JSONB from "json-buffer";
 import { BatchOperation, Level } from "level";
 
-import { BaileysAuthStore } from "./baileysAdapter";
+import { BaileysAuthStore } from "./types";
 
 export const createLevelDbAuthStore = async (
   location: string,

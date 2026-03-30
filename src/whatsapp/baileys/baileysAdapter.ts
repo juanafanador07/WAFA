@@ -2,11 +2,9 @@ import EventEmitter from "node:events";
 
 import type { Boom } from "@hapi/boom";
 import makeWASocket, {
-  AuthenticationState,
   ConnectionState,
   DisconnectReason,
   fetchLatestBaileysVersion,
-  WASocket,
 } from "baileys";
 import { pino } from "pino";
 import QRCode from "qrcode";
@@ -18,11 +16,11 @@ import {
   WaClientNotReadyError,
   WaClientUnexpectedError,
 } from "@/errors/appErrors";
-import { AUTH_DATA_DIR, LOG_LEVEL } from "@/global/config";
+import { LOG_LEVEL } from "@/global/config";
 import { logger } from "@/global/logger";
 import { ClientEventMap, WhatsappClient } from "@/types";
 
-import { createLevelDbAuthStore } from "./levelDbAuthStore";
+import { BaileysAuthStore } from "./types";
 
 enum SocketStatus {
   CONNECTING = "CONNECTING",
@@ -46,27 +44,17 @@ const errorMapping = new Map<DisconnectReason, SocketStatus>([
   [DisconnectReason.restartRequired, SocketStatus.RESTART_REQUIRED],
 ]);
 
-export interface BaileysAuthStore {
-  state: AuthenticationState;
-  saveCreds: () => Promise<void>;
-  clear: () => Promise<void>;
-}
-
-export const createBaileysClient = (): WhatsappClient => {
-  let sock: WASocket | undefined;
-  let authStore: BaileysAuthStore;
+export const createBaileysClient = async (
+  authStore: BaileysAuthStore,
+): Promise<WhatsappClient> => {
+  let sock = await createSocket();
   let status = SocketStatus.CONNECTING;
   const events = new EventEmitter<ClientEventMap>();
-
-  (async () => {
-    authStore = await createLevelDbAuthStore(AUTH_DATA_DIR);
-    if (!sock) sock = await createSocket();
-  })();
 
   async function createSocket() {
     const { version } = await fetchLatestBaileysVersion();
 
-    sock = makeWASocket({
+    const sock = makeWASocket({
       auth: authStore.state,
       version,
       browser: ["Chrome", "Windows", "110.0.5481.177"],
@@ -110,6 +98,10 @@ export const createBaileysClient = (): WhatsappClient => {
     });
 
     return sock;
+  }
+
+  async function reloadSocket() {
+    sock = await createSocket();
   }
 
   async function handleConnectionUpdate(state: Partial<ConnectionState>) {
@@ -158,7 +150,7 @@ export const createBaileysClient = (): WhatsappClient => {
 
     // setTimeout prevents recursion
     // Retry after 15s. See https://github.com/WhiskeySockets/Baileys/issues/2370#issuecomment-3954339410
-    setTimeout(createSocket, 15000);
+    setTimeout(reloadSocket, 15000);
   }
 
   return {
@@ -213,7 +205,7 @@ export const createBaileysClient = (): WhatsappClient => {
     async sendMessage({ chat, text, attachment }) {
       try {
         if (!attachment) {
-          await sock?.sendMessage(chat, {
+          await sock.sendMessage(chat, {
             text,
           });
 
@@ -225,7 +217,7 @@ export const createBaileysClient = (): WhatsappClient => {
 
         if (attachment.mimetype.startsWith("image")) {
           try {
-            await sock?.sendMessage(chat, {
+            await sock.sendMessage(chat, {
               caption,
               image: await sharp(buffer).png().toBuffer(),
               mimetype: "image/png",
@@ -238,7 +230,7 @@ export const createBaileysClient = (): WhatsappClient => {
         }
 
         if (attachment.mimetype.startsWith("video")) {
-          await sock?.sendMessage(chat, {
+          await sock.sendMessage(chat, {
             caption,
             video: buffer,
             mimetype,
@@ -249,12 +241,12 @@ export const createBaileysClient = (): WhatsappClient => {
 
         if (attachment.mimetype.startsWith("audio")) {
           if (caption) {
-            await sock?.sendMessage(chat, {
+            await sock.sendMessage(chat, {
               text,
             });
           }
 
-          await sock?.sendMessage(chat, {
+          await sock.sendMessage(chat, {
             audio: buffer,
             mimetype,
           });
@@ -262,7 +254,7 @@ export const createBaileysClient = (): WhatsappClient => {
           return;
         }
 
-        await sock?.sendMessage(chat, {
+        await sock.sendMessage(chat, {
           caption,
           mimetype,
           fileName: filename,
